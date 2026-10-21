@@ -25,17 +25,19 @@ class Backend:
         self.presentation = Presentation()
         self.active: dict | None = None  # {"mode", "external"} solange wir etwas geaendert haben
         self.profiles = profiles.load()
+        self.installing = False
 
     # --- Zustand -----------------------------------------------------------
     async def state(self) -> dict:
-        mons = [displays.summarize(m) for m in await hypr.monitors()]
+        raw = await hypr.monitors()
+        mons = [displays.summarize(m, raw) for m in raw]
         for m in mons:
             m["profile"] = self.profiles.get(m["key"])
         return {
             "monitors": mons,
             "active": self.active,
             "presentation": self.presentation.active,
-            "cast": cast.capabilities(),
+            "cast": {**await cast.capabilities(), "installing": self.installing},
         }
 
     async def broadcast(self, event: str, data) -> None:
@@ -82,6 +84,24 @@ class Backend:
     async def cmd_launch_miracast(self):
         await cast.launch_miracast()
 
+    async def cmd_install_miracast(self):
+        """Startet die Installation im Hintergrund; Fortschritt kommt per state,
+        das Ergebnis per Event "install_done"."""
+        if self.installing:
+            return
+        self.installing = True
+        asyncio.create_task(self._install_miracast())
+
+    async def _install_miracast(self) -> None:
+        try:
+            await cast.install_miracast()
+            result = {"ok": True}
+        except Exception as e:
+            result = {"ok": False, "error": str(e)}
+        self.installing = False
+        await self.broadcast("install_done", result)
+        await self.push_state()
+
     async def restore(self) -> None:
         if self.active is not None:
             await hypr.reload()
@@ -98,7 +118,7 @@ class Backend:
                                     profile.get("matchResolution", True))
             if profile.get("presentation"):
                 await self.presentation.set(True)
-        await self.broadcast("monitor_added", {"monitor": displays.summarize(mon),
+        await self.broadcast("monitor_added", {"monitor": displays.summarize(mon, [mon]),
                                                "autoApplied": bool(profile)})
 
     async def on_monitor_removed(self, name: str) -> None:
@@ -155,6 +175,15 @@ async def watch_parent(stop: asyncio.Event) -> None:
     stop.set()
 
 
+async def _socket_alive() -> bool:
+    try:
+        _, writer = await asyncio.open_unix_connection(SOCKET)
+    except OSError:
+        return False
+    writer.close()
+    return True
+
+
 async def main(exit_with_parent: bool = False) -> None:
     backend = Backend()
     stop = asyncio.Event()
@@ -163,6 +192,10 @@ async def main(exit_with_parent: bool = False) -> None:
         loop.add_signal_handler(sig, stop.set)
 
     if os.path.exists(SOCKET):
+        if await _socket_alive():
+            # Ein anderes Backend laeuft schon - die App verbindet sich dann dorthin.
+            print(f"HyprCast-Backend laeuft bereits: {SOCKET}", flush=True)
+            return
         os.unlink(SOCKET)
     server = await asyncio.start_unix_server(backend.handle_client, SOCKET)
     os.chmod(SOCKET, 0o600)

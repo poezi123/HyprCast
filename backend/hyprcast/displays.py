@@ -35,14 +35,17 @@ def common_mode(internal: dict, external: dict) -> str | None:
     return f"{best[0]}x{best[1]}@{best[2]:g}" if best else None
 
 
-def summarize(mon: dict) -> dict:
+def summarize(mon: dict, all_mons: list[dict] = ()) -> dict:
+    # Hyprland meldet bei mirrorOf die ID der Quelle, nicht den Namen.
+    mirror = str(mon.get("mirrorOf", "none"))
+    names = {str(m["id"]): m["name"] for m in all_mons}
     return {
         "name": mon["name"],
         "description": mon.get("description", ""),
         "key": device_key(mon),
         "internal": is_internal(mon["name"]),
         "disabled": mon.get("disabled", False),
-        "mirrorOf": mon.get("mirrorOf", "none"),
+        "mirrorOf": names.get(mirror, mirror),
         "mode": f"{mon['width']}x{mon['height']}@{mon['refreshRate']:.0f}",
         "availableModes": mon.get("availableModes", []),
     }
@@ -62,13 +65,15 @@ async def apply(mode: str, external_name: str, side: str = "right", match_resolu
     if mode == "mirror":
         common = common_mode(internal, external) if match_resolution else None
         await hypr.set_monitor(output=internal["name"], mode=common or "preferred",
-                               position="0x0", scale="1")
+                               position="0x0", scale="1", disabled=False)
         await hypr.set_monitor(output=external["name"], mode=common or "preferred",
                                position="auto", scale="1", mirror=internal["name"])
     elif mode == "extend":
-        await hypr.set_monitor(output=internal["name"], mode="preferred", position="0x0", scale="1")
+        await hypr.set_monitor(output=internal["name"], mode="preferred", position="0x0",
+                               scale="1", disabled=False)
         await hypr.set_monitor(output=external["name"], mode="preferred",
-                               position=f"auto-{side}", scale="1")
+                               position=f"auto-{side}", scale="1", mirror="")
     else:  # external_only
-        await hypr.set_monitor(output=external["name"], mode="preferred", position="0x0", scale="1")
+        await hypr.set_monitor(output=external["name"], mode="preferred",
+                               position="0x0", scale="1", mirror="")
         await hypr.set_monitor(output=internal["name"], disabled=True)

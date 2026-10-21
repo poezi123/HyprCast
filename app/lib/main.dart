@@ -76,6 +76,10 @@ class _HomePageState extends State<HomePage> {
       _askMode(data['monitor'] as Map<String, dynamic>);
     } else if (name == 'monitor_added') {
       _toast('${_label(data['monitor'])}: gemerkte Einstellung angewendet');
+    } else if (name == 'install_done') {
+      _toast(data['ok'] == true
+          ? 'Miracast/Chromecast ist installiert'
+          : 'Installation fehlgeschlagen: ${data['error']}');
     }
   }
 
@@ -266,13 +270,36 @@ class _HomePageState extends State<HomePage> {
               ),
             ]),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.cast),
-              label: Text(cast['miracastInstalled'] == true
-                  ? 'Miracast / Chromecast'
-                  : 'Miracast / Chromecast (gnome-network-displays fehlt)'),
-              onPressed: cast['miracast'] == true ? () => _run('launch_miracast') : null,
-            ),
+            if (cast['miracastInstalled'] == true)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cast),
+                label: const Text('Miracast / Chromecast'),
+                onPressed: () => _run('launch_miracast'),
+              )
+            else ...[
+              const Text('Für Miracast/Chromecast wird GNOME Network Displays '
+                  'gebraucht (von Flathub, nur für deinen Benutzer, kein Passwort).'),
+              const SizedBox(height: 8),
+              if (cast['installing'] == true)
+                const Row(children: [
+                  SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 12),
+                  Text('Wird heruntergeladen …'),
+                ])
+              else
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.download),
+                  label: const Text('Herunterladen'),
+                  onPressed: cast['miracastInstallable'] == true
+                      ? () => _run('install_miracast')
+                      : null,
+                ),
+              if (cast['miracastInstallable'] != true && cast['installing'] != true)
+                const Text('flatpak fehlt – bitte zuerst flatpak installieren.'),
+            ],
           ],
         ),
       ),
