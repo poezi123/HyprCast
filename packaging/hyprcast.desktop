@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=HyprCast
+GenericName=Beamer & Bildschirme
+Comment=HDMI, Beamer und Tafel unter Hyprland einfach verbinden
+Exec=hyprcast
+Icon=video-display
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=hdmi;beamer;projector;monitor;mirror;cast;miracast;

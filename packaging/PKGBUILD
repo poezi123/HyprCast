@@ -1,0 +1,32 @@
+pkgname=hyprcast
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="HDMI, Beamer und Tafel unter Hyprland einfach verbinden"
+arch=('x86_64')
+url="https://github.com/GHUSER/hyprcast"
+license=('MIT')
+depends=('hyprland' 'python' 'gtk3' 'systemd' 'xdg-utils')
+makedepends=('flutter-bin' 'clang' 'cmake' 'ninja' 'pkgconf')
+optdepends=('gnome-network-displays: Miracast/Chromecast zur Tafel'
+            'xdg-desktop-portal-hyprland: Bildschirmfreigabe im Browser')
+# Lokal bauen: Quellen aus dem Repo (eine Ebene hoeher)
+source=()
+
+build() {
+  cd "$startdir/../app"
+  flutter --disable-analytics >/dev/null 2>&1 || true
+  flutter pub get
+  flutter build linux --release
+}
+
+package() {
+  local root="$startdir/.."
+  install -d "$pkgdir/usr/lib/hyprcast"
+  cp -r "$root/app/build/linux/x64/release/bundle" "$pkgdir/usr/lib/hyprcast/bundle"
+  install -d "$pkgdir/usr/lib/hyprcast/backend"
+  cp -r "$root/backend/hyprcast" "$pkgdir/usr/lib/hyprcast/backend/"
+  find "$pkgdir/usr/lib/hyprcast/backend" -name __pycache__ -prune -exec rm -rf {} +
+  install -Dm755 "$root/packaging/hyprcast.sh" "$pkgdir/usr/bin/hyprcast"
+  install -Dm644 "$root/packaging/hyprcast.desktop" "$pkgdir/usr/share/applications/hyprcast.desktop"
+  install -Dm644 "$root/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
