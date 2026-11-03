@@ -1,6 +1,6 @@
 # HyprCast
 
-Beamer, HDMI und die iiyama-Tafel unter Hyprland ohne Gefummel.
+Beamer, HDMI und Fernseher unter Hyprland ohne Kopfzerbechen.
 
 - **app/** – Oberfläche (Flutter/Dart). Startet das Backend selbst.
 - **backend/** – Python, nur Standardbibliothek. Spricht mit Hyprland.
@@ -9,18 +9,6 @@ Alles, was die App einstellt, gilt nur, solange sie läuft. Beim Schließen
 (oder wenn das Kabel abgezogen wird) lädt sie die Hyprland-Config neu und
 schaltet den Präsentationsmodus aus. In die Hyprland-Config wird nichts
 geschrieben; gemerkte Geräte liegen in `~/.config/hyprcast/profiles.json`.
-
-## Starten (Entwicklung)
-
-    cd app
-    flutter create --platforms=linux .   # einmalig, erzeugt linux/
-    flutter run -d linux
-
-Nur das Backend testen:
-
-    cd backend
-    python3 -m unittest discover -s tests -t .
-    python3 -m hyprcast
 
 ## Voraussetzung für HDMI
 
@@ -34,3 +22,4 @@ Laut iiyama kann iiShare Miracast, AirPlay, teils Chromecast und Webcast
 (Teilen über eine URL). Eine Linux-App gibt es nicht. Die App bietet:
 URL im Browser öffnen und Miracast/Chromecast über gnome-network-displays.
 Was die Tafel in der Schule tatsächlich anbietet, ist noch zu prüfen.
+### Fernseher usw. werden ganz normal angezeigt.
